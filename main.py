@@ -50,7 +50,9 @@ for movie in url_movies:
         if character.find('a') and "page does not exist" not in character.find('a').get('title'):
             name = character.find('a').get("href")
             # characters_url.append("https://en.wikipedia.org" + name)
-            if name not in characters_dict and 'Gal Gadot' not in name:
+            if "/wiki/Gal_Gadot" in name:
+                continue
+            if name not in characters_dict:
                 characters_dict[name] = 1
             else:
                 characters_dict[name] = characters_dict[name] + 1
@@ -89,6 +91,8 @@ for name in characters_dict.keys():
 
     if biography_table.find('div', class_='birthplace'):
         birth_country = biography_table.find('div', class_='birthplace').get_text()
+        split = birth_country.split(', ')
+        birth_country = split[len(split) - 1]
     else:
         birth_country = 'NA'
         # need to ask what to do with this issue
