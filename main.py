@@ -66,7 +66,7 @@ for name in characters_dict.keys():
     # need to check this issue
     if not biography_table:
         biography_table = curr_soup.find('table', class_='infobox vcard')
-    #only one charachter
+    # only one charachter
     if not biography_table:
         biography_table = curr_soup.find('table', class_='infobox vcard plainlist')
 
@@ -118,7 +118,9 @@ for name in characters_dict.keys():
     if not awards_table:
         awards_table = awards_label.findNext('table', class_='wikitable')
     if not awards_table:
-        list_url = "https://en.wikipedia.org" + awards_label.findNext('div', class_='hatnote navigation-not-searchable').find('a').get('href')
+        list_url = "https://en.wikipedia.org" + awards_label.findNext('div',
+                                                                      class_='hatnote navigation-not-searchable').find(
+            'a').get('href')
         url = urlopen(list_url)
         curr_soup = BeautifulSoup(url)
         awards_tables = curr_soup.findAll('table', class_="wikitable")
@@ -164,11 +166,9 @@ df = pd.DataFrame(Name, columns=['Name'])
 df['Birth'] = Birth
 df['Country'] = Country
 df['Awards'] = Awards
-pandas.set_option('display.max_rows', df.shape[0]+1)
+pandas.set_option('display.max_rows', df.shape[0] + 1)
 print(df)
 # print(df.groupby('Vin Diesel').count())
-
-
 
 
 # df = pd.DataFrame(Year, columns=['Year'])
