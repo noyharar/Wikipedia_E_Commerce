@@ -6,6 +6,7 @@ import pandas as pd
 import re
 import matplotlib.pyplot as plt
 import numpy as np
+import unidecode
 
 WIKI_URL = "https://en.wikipedia.org"
 plt.rcdefaults()
@@ -54,32 +55,48 @@ def get_characters_pages(url_movies):
     for movie in url_movies:
         movie_page_html = BeautifulSoup(urlopen(movie))
         cast_list = movie_page_html.find("span", {"id": re.compile("cast.*|Cast.*")}).findNext('ul').findAll('li')
+        if len(cast_list) == 1:
+            separate_list = movie_page_html.find("span", {"id": re.compile("cast.*|Cast.*")}).findAllNext('ul')
+            for separate in separate_list:
+                if 'a' != separate.find('li').findNext().name:
+                    break
+                cast_list.append(separate.find('li'))
         if movie_page_html.find("span", {"id": "As_themselves"}):
             continue_list = movie_page_html.find("span", {"id": "As_themselves"}).findNext('ul').findAll('li')
             cast_list.extend(continue_list)
         for character in cast_list:
             if character.find('a'):
-                character_name = character.find('a').get("href")
-                if "/wiki/" not in character_name:
+                character_url = character.find('a').get("href")
+                character_name = unidecode.unidecode(character.find('a').get("title"))
+                if "/wiki/" not in character_url:
                     array_name = character.find('a').get('title').split(" ")
                     character_name = array_name[0] + " " + array_name[1]
                     if character_name not in characters_dict:
-                        characters_dict[character_name] = 1
+                        characters_dict[character_name] = {
+                            'count': 1,
+                            'url': character.find('a').get("href")
+                        }
                     else:
-                        characters_dict[character_name] = characters_dict[character_name] + 1
+                        characters_dict[character_name]['count'] = characters_dict[character_name]['count'] + 1
                     name.append(character_name)
                     birth.append("NA")
                     country.append("NA")
                     awards.append("NA")
                     continue
-                if "/wiki/Gal_Gadot" in character_name:
+                if "Gal Gadot" in character_name:
                     continue
                 if character_name not in characters_dict:
-                    characters_dict[character_name] = 1
-                    characters_dict_with_page[character_name] = 1
+                    characters_dict[character_name] = {
+                        'count': 1,
+                        'url': character.find('a').get("href")
+                    }
+                    characters_dict_with_page[character_name] = {
+                        'count': 1,
+                        'url': character.find('a').get("href")
+                    }
                 else:
-                    characters_dict[character_name] = characters_dict[character_name] + 1
-                    characters_dict_with_page[character_name] = characters_dict_with_page[character_name] + 1
+                    characters_dict[character_name]['count'] = characters_dict[character_name]['count'] + 1
+                    characters_dict_with_page[character_name]['count'] = characters_dict_with_page[character_name]['count'] + 1
             else:
                 if "as" in character.get_text():
                     array_name = character.get_text().split(" ")
@@ -88,12 +105,15 @@ def get_characters_pages(url_movies):
                         if i != 'as':
                             name_to_add = name_to_add + i + " "
                         else:
-                            name_to_add[:-1]
+                            name_to_add = name_to_add[:-1]
                             break
                     if name_to_add not in characters_dict:
-                        characters_dict[name_to_add] = 1
+                        characters_dict[name_to_add] = {
+                            'count': 1,
+                            'url': 'NA'
+                        }
                     else:
-                        characters_dict[name_to_add] = characters_dict[name_to_add] + 1
+                        characters_dict[name_to_add]['count'] = characters_dict[name_to_add]['count'] + 1
                     name.append(name_to_add)
                     birth.append("NA")
                     country.append("NA")
@@ -115,7 +135,7 @@ def get_characters_info(characters_pages_info):
     awards = characters_pages_info['awards']
     characters_dict_with_page = characters_pages_info['characters_dict_with_page']
     for character_name in characters_dict_with_page.keys():
-        url = urlopen(WIKI_URL + character_name)
+        url = urlopen(WIKI_URL + characters_dict_with_page[character_name]['url'])
         curr_soup = BeautifulSoup(url)
         biography_table = curr_soup.find('table', class_='infobox biography vcard')
         # need to check this issue
@@ -124,8 +144,15 @@ def get_characters_info(characters_pages_info):
         # only one charachter
         if not biography_table:
             biography_table = curr_soup.find('table', class_='infobox vcard plainlist')
-
         curr_name = curr_soup.find('h1', class_='firstHeading').get_text()
+        if '(' in curr_name:
+            only_name = curr_name.split(" ")
+            curr_name = ""
+            for i in only_name:
+                if '(' in i:
+                    break
+                curr_name = curr_name + i + " "
+            curr_name = curr_name[:-1]
         # curr_name = biography_table.find('div', class_='fn').get_text()
         name.append(curr_name)
         # print(curr_name)
@@ -228,7 +255,10 @@ df['Awards'] = characters_info['awards']
 pandas.set_option('display.max_rows', df.shape[0] + 1)
 print(df)
 
-NumOfJointMovies = Counter(characters_pages_info['characters_dict'].values())
+counters = []
+for v in characters_pages_info['characters_dict'].values():
+    counters.append(v['count'])
+NumOfJointMovies = Counter(counters)
 c = sorted(NumOfJointMovies.items())
 
 objects = c
